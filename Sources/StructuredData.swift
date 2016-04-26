@@ -27,7 +27,8 @@ public protocol StructuredDataSerializer {
 public enum StructuredData {
     case nullValue
     case boolValue(Bool)
-    case numberValue(Double)
+    case doubleValue(Double)
+    case integerValue(Int)
     case stringValue(String)
     case binaryValue(Data)
     case arrayValue([StructuredData])
@@ -42,11 +43,11 @@ public enum StructuredData {
     }
 
     public static func from(_ value: Double) -> StructuredData {
-        return .numberValue(value)
+        return .doubleValue(value)
     }
 
     public static func from(_ value: Int) -> StructuredData {
-        return .numberValue(Double(value))
+        return .integerValue(value)
     }
 
     public static func from(_ value: String) -> StructuredData {
@@ -72,9 +73,16 @@ public enum StructuredData {
         }
     }
 
-    public var isNumber: Bool {
+    public var isDouble: Bool {
         switch self {
-        case .numberValue: return true
+        case .doubleValue: return true
+        default: return false
+        }
+    }
+    
+    public var isInteger: Bool {
+        switch self {
+        case .integerValue: return true
         default: return false
         }
     }
@@ -116,23 +124,23 @@ public enum StructuredData {
 
     public var double: Double? {
         switch self {
-        case .numberValue(let n): return n
+        case .doubleValue(let n): return n
         default: return nil
         }
     }
 
     public var int: Int? {
-        if let v = double {
-            return Int(v)
+        switch self {
+        case .integerValue(let int): return int
+        default: return nil
         }
-        return nil
     }
 
     public var uint: UInt? {
-        if let v = double {
-            return UInt(v)
+        switch self {
+        case .integerValue(let int) where int >= 0: return UInt(int)
+        default: return nil
         }
-        return nil
     }
 
     public var string: String? {
@@ -165,19 +173,21 @@ public enum StructuredData {
 
     public func get<T>() -> T? {
         switch self {
-        case nullValue:
+        case .nullValue:
             return nil
-        case boolValue(let bool):
+        case .boolValue(let bool):
             return bool as? T
-        case numberValue(let number):
+        case .doubleValue(let number):
             return number as? T
-        case stringValue(let string):
+        case .integerValue(let integer):
+            return integer as? T
+        case .stringValue(let string):
             return string as? T
-        case binaryValue(let binary):
+        case .binaryValue(let binary):
             return binary as? T
-        case arrayValue(let array):
+        case .arrayValue(let array):
             return array as? T
-        case dictionaryValue(let dictionary):
+        case .dictionaryValue(let dictionary):
             return dictionary as? T
         }
     }
@@ -192,17 +202,22 @@ public enum StructuredData {
 
     public func get<T>() throws -> T {
         switch self {
-        case boolValue(let boolean):
+        case .boolValue(let boolean):
             if let value = boolean as? T {
                 return value
             }
 
-        case numberValue(let number):
+        case .doubleValue(let number):
             if let value = number as? T {
                 return value
             }
+            
+        case .integerValue(let integer):
+            if let value = integer as? T {
+                return value
+            }
 
-        case stringValue(let string):
+        case .stringValue(let string):
             if let value = string as? T {
                 return value
             }
@@ -212,12 +227,12 @@ public enum StructuredData {
                 return value
             }
 
-        case arrayValue(let array):
+        case .arrayValue(let array):
             if let value = array as? T {
                 return value
             }
 
-        case dictionaryValue(let dictionary):
+        case .dictionaryValue(let dictionary):
             if let value = dictionary as? T {
                 return value
             }
@@ -350,9 +365,14 @@ public func ==(lhs: StructuredData, rhs: StructuredData) -> Bool {
         case .binaryValue(let rhsValue): return lhsValue == rhsValue
         default: return false
         }
-    case .numberValue(let lhsValue):
+    case .doubleValue(let lhsValue):
         switch rhs {
-        case .numberValue(let rhsValue): return lhsValue == rhsValue
+        case .doubleValue(let rhsValue): return lhsValue == rhsValue
+        default: return false
+        }
+    case .integerValue(let lhsValue):
+        switch rhs {
+        case .integerValue(let rhsValue): return lhsValue == rhsValue
         default: return false
         }
     case .arrayValue(let lhsValue):
@@ -382,13 +402,13 @@ extension StructuredData: BooleanLiteralConvertible {
 
 extension StructuredData: IntegerLiteralConvertible {
     public init(integerLiteral value: IntegerLiteralType) {
-        self = .numberValue(Double(value))
+        self = .integerValue(Int(value))
     }
 }
 
 extension StructuredData: FloatLiteralConvertible {
     public init(floatLiteral value: FloatLiteralType) {
-        self = .numberValue(Double(value))
+        self = .doubleValue(Double(value))
     }
 }
 
@@ -448,7 +468,8 @@ extension StructuredData: CustomStringConvertible {
             switch data {
             case .nullValue: return "null"
             case .boolValue(let b): return b ? "true" : "false"
-            case .numberValue(let n): return serialize(number: n)
+            case .doubleValue(let n): return serialize(number: n)
+            case .integerValue(let n): return n.description
             case .stringValue(let s): return escape(s)
             case .binaryValue(let d): return escape(d.hexadecimalDescription)
             case .arrayValue(let a): return serialize(array: a)
