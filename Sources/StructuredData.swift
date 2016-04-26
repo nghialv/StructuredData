@@ -79,7 +79,7 @@ public enum StructuredData {
         default: return false
         }
     }
-    
+
     public var isInteger: Bool {
         switch self {
         case .integerValue: return true
@@ -206,38 +206,32 @@ public enum StructuredData {
             if let value = boolean as? T {
                 return value
             }
-
         case .doubleValue(let number):
             if let value = number as? T {
                 return value
             }
-            
         case .integerValue(let integer):
             if let value = integer as? T {
                 return value
             }
-
         case .stringValue(let string):
             if let value = string as? T {
                 return value
             }
-
         case .binaryValue(let binary):
             if let value = binary as? T {
                 return value
             }
-
         case .arrayValue(let array):
             if let value = array as? T {
                 return value
             }
-
         case .dictionaryValue(let dictionary):
             if let value = dictionary as? T {
                 return value
             }
-
-        default: break
+        default:
+            break
         }
 
         throw Error.incompatibleType
